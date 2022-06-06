@@ -61,6 +61,22 @@ Resources:
       Type: String
       Value: "0"
 
+  ##############
+  # CODECOMMIT #
+  ##############
+
+  CodeCommitRepo:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: automated-mwaa-dag-deployment
+      RepositoryDescription: This repository stores the code for automating DAG deployments for MWAA.
+      Code:
+        BranchName: main
+        S3: 
+          Bucket: automated-dag-deployment-with-mwaa
+          Key: automated-dag-deployment.zip
+
+
   #############
   # CODEBUILD #
   #############
@@ -237,6 +253,15 @@ Resources:
                 Action:
                   - iam:PassRole
                 Resource: !GetAtt CloudFormationRole.Arn
+              - Effect: Allow
+                Action:
+                  - codecommit:GitBranch
+                  - codecommit:GitCommit
+                  - codecommit:UploadArchive
+                  - codecommit:GetUploadArchiveStatus
+                  - codecommit:CancelUploadArchive
+                  - codecommit:GitPull
+                Resource: !GetAtt CodeCommitRepo.Arn
   CloudFormationRole:
     Type: AWS::IAM::Role
     Properties:
@@ -302,11 +327,10 @@ Resources:
               ActionTypeId:
                 Category: Source
                 Owner: "AWS"
-                Provider: CodeStarSourceConnection
+                Provider: CodeCommit
                 Version: '1'
               Configuration:
-                ConnectionArn: !Ref CodeStarConnectionArn
-                FullRepositoryId: !Sub "${GitHubAccountName}/${CodeRepoName}"
+                RepositoryName: !Ref CodeCommitRepo
                 BranchName: "main"
                 # OAuthToken: '{{resolve:secretsmanager:MyGitHubToken:SecretString:token}}'
               OutputArtifacts:
