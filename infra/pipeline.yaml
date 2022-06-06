@@ -255,8 +255,8 @@ Resources:
                 Resource: !GetAtt CloudFormationRole.Arn
               - Effect: Allow
                 Action:
-                  - codecommit:GitBranch
-                  - codecommit:GitCommit
+                  - codecommit:GetBranch
+                  - codecommit:GetCommit
                   - codecommit:UploadArchive
                   - codecommit:GetUploadArchiveStatus
                   - codecommit:CancelUploadArchive
