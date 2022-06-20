@@ -332,7 +332,7 @@ Resources:
                 Provider: CodeCommit
                 Version: '1'
               Configuration:
-                RepositoryName: !Ref CodeCommitRepo
+                RepositoryName: !Ref CodeCommitRepoName
                 BranchName: "main"
               OutputArtifacts:
                 - Name: SourceArtifact
