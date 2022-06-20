@@ -14,27 +14,27 @@ returns non-zero exit code if the test fails
 """
 def testWorkflow():
     mwaa_image = 'public.ecr.aws/w7c2o1k6/mwaa-local:2.0.2'
-    mwaa_db_image = 'postgres:alpine3.16'
+    mwaa_db_image = 'public.ecr.aws/w7c2o1k6/postgres:alpine3.16'
     mwaa = None
     postgres = None
     try:
         docker_client_ecr = docker.from_env(version='1.24')
-        docker_client_hub = docker.from_env()
-        ecr_client = boto3.client('ecr-public', region_name=region)
+#        docker_client_hub = docker.from_env()
+        ecr_client = boto3.client('ecr-public', region_name='us-east-1')
 
-        docker_client_hub.images.pull(mwaa_db_image)
+#       docker_client_hub.images.pull(mwaa_db_image)
 
         token = ecr_client.get_authorization_token()
         
-#        username, password = base64.b64decode(token['authorizationData'][0]['authorizationToken']).decode().split(':')
         username, password = base64.b64decode(token['authorizationData']['authorizationToken']).decode().split(':')
         
         docker_client_ecr.login(username, password, registry='public.ecr.aws')
 
         auth_config = {'username': username, 'password': password}
         docker_client_ecr.images.pull(mwaa_image, auth_config=auth_config)
-
-        postgres = docker_client_hub.containers.run(
+        docker_client_ecr.images.pull(mwaa_db_image, auth_config=auth_config)
+        
+        postgres = docker_client_ecr.containers.run(
             mwaa_db_image,
             detach=True,
             ports={"5432": 5432},  
