@@ -293,6 +293,11 @@ Resources:
                 - airflow.amazonaws.com
             Action:
              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonElasticMapReduceFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'        
       Path: "/service-role/"
 
   MwaaExecutionPolicy:
@@ -312,12 +317,20 @@ Resources:
             Action: s3:ListAllMyBuckets
             Resource:
               - !Sub "arn:aws:s3:::${S3Bucket}"
+              - !Sub "arn:aws:s3:::${S3Bucket}/*"
           - Effect: Allow
             Action:
-              - "s3:*"
+              - s3:GetObject*
+              - s3:GetBucket*
+              - s3:List*
             Resource:
               - !Sub "arn:aws:s3:::${S3Bucket}"
               - !Sub "arn:aws:s3:::${S3Bucket}/*"
+          - Effect: Allow
+            Action:
+              - s3:GetEncryptionConfiguration
+            Resource:
+              - !Sub "arn:aws:s3:::${S3Bucket}"
           - Effect: Allow
             Action:
               - logs:DescribeLogGroups

@@ -3,7 +3,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   CodeRepoName:
     Type: String
-    Description: Code Repository URL
+    Description: Name to assign CodeCommit Repository
 
   MWAASourceBucket:
     Type: String
@@ -13,14 +13,6 @@ Parameters:
     Type: String
     Description: "DAG Folder"
     Default: "dags"
-
-  GitHubAccountName:
-    Type: String
-    Description: "Github account name"
-
-  CodeStarConnectionArn:
-    Type: String
-    Description: "Codestar connection Arn"
 
   ServiceName:
     Type: String
@@ -143,7 +135,23 @@ Resources:
                 Resource: !Sub "arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/*"
               - Effect: Allow
                 Action:
-                  - ecr:*
+                  - codecommit:GetBranch
+                  - codecommit:GetCommit
+                  - codecommit:GetRepository
+                  - codecommit:ListBranches
+                  - codecommit:ListRepositories
+                  - codecommit:UploadArchive
+                  - codecommit:GetUploadArchiveStatus
+                  - codecommit:CancelUploadArchive
+                  - codecommit:GitPull
+                Resource: !Sub "arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:automated-mwaa-dag-deployment"
+              - Effect: Allow
+                Action:
+                  - ecr-public:*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sts:GetServiceBearerToken
                 Resource: "*"
 
 
@@ -171,7 +179,7 @@ Resources:
           - Name: ACCOUNT_NUMBER
             Value: !Sub ${AWS::AccountId}
           - Name: CODE_REPO
-            Value: !Sub "https://github.com/${GitHubAccountName}/${CodeRepoName}.git"
+            Value: !Sub  !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/automated-mwaa-dag-deployment"
           - Name: DAG_BUCKET
             Value: !Ref MWAASourceBucket
           - Name: MWAA_ENV
@@ -185,8 +193,6 @@ Resources:
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Source:
         BuildSpec: build/buildspec.yaml
-        # GitCloneDepth: 0
-        # Location: !Sub "https://github.com/${GitHubAccountName}/${CodeRepoName}"
         Type: CODEPIPELINE
       SourceVersion: refs/heads/main
 
@@ -245,10 +251,6 @@ Resources:
                   - codebuild:BatchGetBuilds
                   - codebuild:StartBuild
                 Resource: !GetAtt BuildProject.Arn
-              - Effect: Allow
-                Action:
-                  - codestar-connections:UseConnection
-                Resource: !Ref CodeStarConnectionArn
               - Effect: Allow
                 Action:
                   - iam:PassRole
@@ -332,7 +334,6 @@ Resources:
               Configuration:
                 RepositoryName: !Ref CodeCommitRepo
                 BranchName: "main"
-                # OAuthToken: '{{resolve:secretsmanager:MyGitHubToken:SecretString:token}}'
               OutputArtifacts:
                 - Name: SourceArtifact
               RunOrder: 1

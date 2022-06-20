@@ -7,30 +7,34 @@ import boto3
 import base64
 import sys
 import time
+
 """
 This runs mwaa local image and the DB. After they are run, it runs the DAG integrity test and unit test.
 returns non-zero exit code if the test fails
 """
 def testWorkflow():
-    mwaa_image=account+".dkr.ecr."+region+".amazonaws.com/mwaa-local:2.0.2"
-    mwaa_db_image=account+".dkr.ecr."+region+".amazonaws.com/mwaa-db:10-alpine"
+    mwaa_image = 'public.ecr.aws/w7c2o1k6/mwaa-local:2.0.2'
+    mwaa_db_image = 'postgres:alpine3.16'
     mwaa = None
     postgres = None
     try:
-        docker_client = docker.from_env(version='1.24')
-        ecr_client = boto3.client('ecr', region_name=region)
+        docker_client_ecr = docker.from_env(version='1.24')
+        docker_client_hub = docker.from_env()
+        ecr_client = boto3.client('ecr-public', region_name=region)
+
+        docker_client_hub.images.pull(mwaa_db_image)
 
         token = ecr_client.get_authorization_token()
-        username, password = base64.b64decode(token['authorizationData'][0]['authorizationToken']).decode().split(':')
-        registry = token['authorizationData'][0]['proxyEndpoint']
-        docker_client.login(username, password, registry=registry)
+        
+#        username, password = base64.b64decode(token['authorizationData'][0]['authorizationToken']).decode().split(':')
+        username, password = base64.b64decode(token['authorizationData']['authorizationToken']).decode().split(':')
+        
+        docker_client_ecr.login(username, password, registry='public.ecr.aws')
 
         auth_config = {'username': username, 'password': password}
-        docker_client.images.pull(mwaa_image, auth_config=auth_config)
+        docker_client_ecr.images.pull(mwaa_image, auth_config=auth_config)
 
-        docker_client.images.pull(mwaa_db_image, auth_config=auth_config)
-
-        postgres = docker_client.containers.run(
+        postgres = docker_client_hub.containers.run(
             mwaa_db_image,
             detach=True,
             ports={"5432": 5432},  
@@ -44,7 +48,7 @@ def testWorkflow():
             },
             hostname="postgres"
         )
-        mwaa = docker_client.containers.run(
+        mwaa = docker_client_ecr.containers.run(
             mwaa_image,
             detach=True,
             ports={"8080/tcp": 8080},  # expose local port 8080 to container
